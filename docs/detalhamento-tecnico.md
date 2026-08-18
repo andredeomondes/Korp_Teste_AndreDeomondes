@@ -19,6 +19,8 @@ _Demais usos a preencher conforme a implementação avança._
 | Biblioteca | Onde | Finalidade |
 | --- | --- | --- |
 | Npgsql | Estoque, Faturamento | Driver PostgreSQL para .NET |
+| EF Core (`Npgsql.EntityFrameworkCore.PostgreSQL`) | Estoque | ORM e migrations do schema de Produtos |
+| Testcontainers | Testes do Estoque | Sobe um PostgreSQL real em contêiner para os testes de integração |
 
 _A completar._
 

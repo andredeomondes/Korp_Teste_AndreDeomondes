@@ -12,10 +12,17 @@ export interface ServiceHealth {
   state: HealthState;
 }
 
+/** Os serviços cujo estado a aplicação acompanha, na ordem em que aparecem. */
+export const SERVICOS: readonly ServiceName[] = ['estoque', 'faturamento'];
+
 const LABELS: Record<ServiceName, string> = {
   estoque: 'Serviço de Estoque',
   faturamento: 'Serviço de Faturamento',
 };
+
+export function rotuloDoServico(service: ServiceName): string {
+  return LABELS[service];
+}
 
 @Injectable({ providedIn: 'root' })
 export class HealthService {

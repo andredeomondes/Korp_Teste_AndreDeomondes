@@ -51,9 +51,18 @@ cd frontend && npm install && npm start
 
 O frontend de desenvolvimento sobe em <http://localhost:4200> e consome os serviços em 5001 e 5002.
 
+## Testes
+
+```bash
+dotnet test                      # integração do Estoque (sobe um PostgreSQL real via Testcontainers)
+cd frontend && npm test          # componentes Angular
+```
+
+Os testes do Estoque exigem Docker em execução: cada suíte sobe seu próprio contêiner PostgreSQL e aplica as migrations, sem depender do banco do `docker compose`.
+
 ## Verificação de saúde
 
-O endpoint `/health` de cada serviço testa a conexão com o próprio banco e responde `503` quando não o alcança. A tela inicial da aplicação consulta os dois e exibe o estado de cada um, tornando visível uma indisponibilidade sem precisar abrir logs.
+O endpoint `/health` de cada serviço testa a conexão com o próprio banco e responde `503` quando não o alcança. A tela **Status dos serviços** consulta os dois e exibe o estado de cada um, tornando visível uma indisponibilidade sem precisar abrir logs.
 
 ## Detalhamento técnico
 

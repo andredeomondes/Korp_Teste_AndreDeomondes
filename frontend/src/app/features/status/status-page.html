@@ -1,0 +1,39 @@
+<mat-card appearance="outlined">
+  <mat-card-header class="status__header">
+    <mat-card-title>Status dos serviços</mat-card-title>
+    <button
+      matButton="outlined"
+      [disabled]="checking()"
+      (click)="refresh()"
+      aria-label="Verificar novamente o status dos serviços"
+    >
+      <mat-icon>refresh</mat-icon>
+      Verificar novamente
+    </button>
+  </mat-card-header>
+
+  <mat-card-content>
+    <ul class="status__list">
+      @for (service of services(); track service.service) {
+        <li class="status__item">
+          <span class="status__label">{{ service.label }}</span>
+
+          @if (service.state === 'checking') {
+            <span class="status__checking">
+              <mat-spinner diameter="18" />
+              <span>{{ textOf(service.state) }}</span>
+            </span>
+          } @else {
+            <span
+              class="status__badge"
+              [class.status__badge--offline]="service.state === 'offline'"
+            >
+              <mat-icon>{{ iconOf(service.state) }}</mat-icon>
+              {{ textOf(service.state) }}
+            </span>
+          }
+        </li>
+      }
+    </ul>
+  </mat-card-content>
+</mat-card>
