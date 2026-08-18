@@ -1,0 +1,31 @@
+// Tema do Angular Material (Material 3). As variáveis CSS geradas aqui são
+// usadas tanto pelos componentes do Material quanto pelos estilos próprios da
+// aplicação, mantendo um único sistema de cores e tipografia.
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+}
+
+:root {
+  --app-page-max-width: 72rem;
+}
