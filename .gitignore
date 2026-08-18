@@ -1,0 +1,55 @@
+# AI agent tooling (não faz parte da entrega)
+.claude/
+.agents/
+skills-lock.json
+CLAUDE.md
+AGENTS.md
+
+# Notas de estudo pessoal (não vai pro repo público, uso próprio p/ entrevista)
+docs/decisions/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# .NET / C#
+bin/
+obj/
+*.user
+*.suo
+appsettings.Development.json
+appsettings.*.local.json
+
+# Go
+/vendor/
+*.exe
+*.exe~
+*.dll
+*.test
+*.out
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
