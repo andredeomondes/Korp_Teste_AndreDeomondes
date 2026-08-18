@@ -29,7 +29,7 @@ Identificador da Nota Fiscal, contador global único e crescente para todo o sis
 _Avoid_: ID, Código da nota
 
 **Impressão**:
-Ação que fecha uma Nota Fiscal: só permitida quando Status é Aberta; debita o Saldo dos Produtos envolvidos e muda o Status para Fechada. Se falhar (ex.: serviço de Estoque indisponível), a nota permanece Aberta.
+Ação que fecha uma Nota Fiscal: só permitida quando Status é Aberta; debita o Saldo dos Produtos envolvidos e muda o Status para Fechada. O débito é atômico entre todos os Itens da Nota — ou todos são debitados, ou nenhum. Se falhar (ex.: Saldo insuficiente em qualquer Item da Nota, ou serviço de Estoque indisponível), nenhum Saldo é alterado e a nota permanece Aberta.
 _Avoid_: Emissão, Finalização
 
 ## Contexts
