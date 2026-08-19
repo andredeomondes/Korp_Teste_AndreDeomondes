@@ -1,0 +1,112 @@
+<div class="detalhe">
+  <a matButton routerLink="/notas-fiscais">
+    <mat-icon>arrow_back</mat-icon>
+    Todas as Notas Fiscais
+  </a>
+
+  @if (carregando() && !nota()) {
+    <p class="detalhe__vazio"><mat-spinner diameter="20" /> Carregando Nota Fiscal…</p>
+  } @else if (nota(); as notaFiscal) {
+    <mat-card appearance="outlined">
+      <mat-card-header>
+        <mat-card-title>Nota Fiscal {{ notaFiscal.numero }}</mat-card-title>
+        <mat-card-subtitle>Status: {{ notaFiscal.status }}</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form class="detalhe__form" [formGroup]="form" (ngSubmit)="adicionar()">
+          <mat-form-field appearance="outline">
+            <mat-label>Produto</mat-label>
+            <mat-select formControlName="produtoId">
+              @for (produto of produtos(); track produto.id) {
+                <mat-option [value]="produto.id">
+                  {{ produto.codigo }} — {{ produto.descricao }}
+                </mat-option>
+              }
+            </mat-select>
+            @if (form.controls.produtoId.hasError('required')) {
+              <mat-error>Escolha um Produto.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Quantidade</mat-label>
+            <input matInput type="number" formControlName="quantidade" min="1" step="1" />
+            @if (form.controls.quantidade.hasError('min')) {
+              <mat-error>Quantidade deve ser positiva.</mat-error>
+            }
+          </mat-form-field>
+
+          <button matButton="filled" type="submit" [disabled]="salvando()">
+            @if (salvando()) {
+              <mat-spinner diameter="18" />
+            } @else {
+              <mat-icon>add</mat-icon>
+            }
+            Adicionar
+          </button>
+        </form>
+
+        @if (erro(); as mensagem) {
+          <p class="detalhe__erro" role="alert">
+            <mat-icon>error</mat-icon>
+            {{ mensagem }}
+          </p>
+        }
+
+        @if (notaFiscal.itens.length === 0) {
+          <p class="detalhe__vazio">Nenhum Item da Nota ainda.</p>
+        } @else {
+          <table mat-table [dataSource]="notaFiscal.itens" class="detalhe__tabela">
+            <ng-container matColumnDef="codigo">
+              <th mat-header-cell *matHeaderCellDef>Código</th>
+              <td mat-cell *matCellDef="let item">{{ item.codigo }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="descricao">
+              <th mat-header-cell *matHeaderCellDef>Descrição</th>
+              <td mat-cell *matCellDef="let item">{{ item.descricao }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="quantidade">
+              <th mat-header-cell *matHeaderCellDef>Quantidade</th>
+              <td mat-cell *matCellDef="let item">
+                <input
+                  class="detalhe__quantidade"
+                  type="number"
+                  min="1"
+                  step="1"
+                  [value]="item.quantidade"
+                  [attr.aria-label]="'Quantidade de ' + item.codigo"
+                  (change)="alterarQuantidade(item.id, $any($event.target).value)"
+                />
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="acoes">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let item">
+                <button
+                  matIconButton
+                  type="button"
+                  [attr.aria-label]="'Remover ' + item.codigo + ' da Nota Fiscal'"
+                  (click)="remover(item.id)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="colunas"></tr>
+            <tr mat-row *matRowDef="let row; columns: colunas"></tr>
+          </table>
+        }
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <p class="detalhe__erro" role="alert">
+      <mat-icon>error</mat-icon>
+      {{ erro() ?? 'Nota Fiscal não encontrada.' }}
+    </p>
+  }
+</div>

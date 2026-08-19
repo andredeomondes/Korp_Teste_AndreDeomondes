@@ -1,3 +1,4 @@
+using Faturamento.Estoque;
 using Faturamento.NotasFiscais;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -18,6 +19,12 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<FaturamentoDbContext>(options => options
     .UseNpgsql(builder.Configuration.GetConnectionString("Faturamento")
         ?? throw new InvalidOperationException("Connection string 'Faturamento' não configurada.")));
+
+// O Produto é do Estoque: o Faturamento o consulta por REST síncrono, porque a
+// tela precisa do Código e da Descrição na hora em que o Item entra na nota.
+builder.Services.AddHttpClient<IEstoqueClient, EstoqueHttpClient>(http =>
+    http.BaseAddress = new Uri(builder.Configuration["Servicos:Estoque"]
+        ?? throw new InvalidOperationException("Endereço 'Servicos:Estoque' não configurado.")));
 
 var app = builder.Build();
 
@@ -64,6 +71,8 @@ app.MapGet("/health", async (FaturamentoDbContext db, CancellationToken cancella
 .WithName("GetHealth");
 
 app.MapNotasFiscais();
+app.MapItensDaNota();
+app.MapProdutosDisponiveis();
 
 app.Run();
 

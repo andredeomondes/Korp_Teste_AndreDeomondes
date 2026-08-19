@@ -5,13 +5,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { RouterLink } from '@angular/router';
 
 import { mensagemDoErro } from '../../core/api-error';
-import { NotaFiscal, NotaFiscalService } from '../../core/nota-fiscal.service';
+import { NotaFiscalResumo, NotaFiscalService } from '../../core/nota-fiscal.service';
 
 @Component({
   selector: 'app-notas-fiscais-page',
   imports: [
+    RouterLink,
     MatButtonModule,
     MatCardModule,
     MatIconModule,
@@ -25,9 +27,9 @@ export class NotasFiscaisPage implements OnInit {
   private readonly notaFiscalService = inject(NotaFiscalService);
   private readonly snackBar = inject(MatSnackBar);
 
-  protected readonly colunas = ['numero', 'status'] as const;
+  protected readonly colunas = ['numero', 'status', 'itens', 'acoes'] as const;
 
-  protected readonly notas = signal<NotaFiscal[]>([]);
+  protected readonly notas = signal<NotaFiscalResumo[]>([]);
   protected readonly carregando = signal(false);
   protected readonly criando = signal(false);
   protected readonly erroCriacao = signal<string | null>(null);

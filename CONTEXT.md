@@ -17,7 +17,7 @@ Documento com Numeração sequencial, Status e um ou mais Itens da Nota, emitido
 _Avoid_: Fatura, Pedido, Nota
 
 **Item da Nota**:
-Associação entre uma Nota Fiscal e um Produto, com a quantidade utilizada daquele Produto na nota.
+Associação entre uma Nota Fiscal e um Produto, com a quantidade utilizada daquele Produto na nota. A quantidade é sempre positiva, e um Produto aparece no máximo uma vez por Nota Fiscal — para levar mais unidades, altera-se a quantidade do Item existente.
 _Avoid_: Linha, Item do pedido
 
 **Status (Nota Fiscal)**:

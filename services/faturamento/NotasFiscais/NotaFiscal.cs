@@ -1,8 +1,7 @@
 namespace Faturamento.NotasFiscais;
 
 /// <summary>
-/// Documento com Numeração sequencial e Status. Os Itens da Nota ainda não
-/// fazem parte do modelo.
+/// Documento com Numeração sequencial, Status e um ou mais Itens da Nota.
 /// </summary>
 public sealed class NotaFiscal
 {
@@ -19,4 +18,6 @@ public sealed class NotaFiscal
     /// Impressão, que ainda não existe — por isso não há como mudá-lo de fora.
     /// </summary>
     public StatusNotaFiscal Status { get; private set; } = StatusNotaFiscal.Aberta;
+
+    public List<ItemDaNota> Itens { get; init; } = [];
 }

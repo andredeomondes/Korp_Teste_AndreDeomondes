@@ -1,0 +1,50 @@
+@use '../../shared/feedback' as feedback;
+
+@include feedback.feedback('detalhe');
+
+.detalhe {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+
+.detalhe > mat-card {
+  width: 100%;
+}
+
+.detalhe__form {
+  display: grid;
+  grid-template-columns: minmax(14rem, 2fr) minmax(7rem, 0.6fr) auto;
+  align-items: start;
+  gap: 1rem;
+
+  button {
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width: 55rem) {
+  .detalhe__form {
+    grid-template-columns: 1fr;
+
+    button {
+      margin-top: 0;
+      justify-self: start;
+    }
+  }
+}
+
+.detalhe__tabela {
+  width: 100%;
+  background: transparent;
+}
+
+.detalhe__quantidade {
+  width: 5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-extra-small);
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+}

@@ -1,5 +1,8 @@
+using Faturamento.Estoque;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -17,6 +20,9 @@ public sealed class FaturamentoApiFixture : WebApplicationFactory<Program>, IAsy
 
     public HttpClient Client { get; private set; } = null!;
 
+    /// <summary>O Estoque que este Faturamento enxerga durante os testes.</summary>
+    public EstoqueFalso Estoque { get; } = new();
+
     public async Task InitializeAsync()
     {
         await _postgres.StartAsync();
@@ -32,8 +38,13 @@ public sealed class FaturamentoApiFixture : WebApplicationFactory<Program>, IAsy
     {
         await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
         await connection.OpenAsync();
-        await using var command = new NpgsqlCommand("TRUNCATE TABLE notas_fiscais", connection);
+        // itens_da_nota some junto por cascata da chave estrangeira.
+        await using var command = new NpgsqlCommand(
+            "TRUNCATE TABLE notas_fiscais CASCADE",
+            connection);
         await command.ExecuteNonQueryAsync();
+
+        Estoque.Limpar();
     }
 
     /// <summary>
@@ -45,6 +56,15 @@ public sealed class FaturamentoApiFixture : WebApplicationFactory<Program>, IAsy
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Faturamento", _postgres.GetConnectionString());
+        builder.UseSetting("Servicos:Estoque", "http://estoque-de-teste");
+
+        // Substitui apenas o transporte: o EstoqueHttpClient real continua no
+        // caminho, então a montagem da URL e a leitura do JSON também são
+        // exercitadas pelos testes.
+        builder.ConfigureTestServices(services => services
+            .AddHttpClient<IEstoqueClient, EstoqueHttpClient>(http =>
+                http.BaseAddress = new Uri("http://estoque-de-teste"))
+            .ConfigurePrimaryHttpMessageHandler(() => Estoque));
     }
 
     public new async Task DisposeAsync()
