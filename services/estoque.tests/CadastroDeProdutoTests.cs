@@ -31,6 +31,21 @@ public sealed class CadastroDeProdutoTests : IClassFixture<EstoqueApiFixture>, I
     }
 
     [Fact]
+    public async Task Location_do_produto_cadastrado_leva_ao_proprio_produto()
+    {
+        var resposta = await _api.Client.PostAsJsonAsync(
+            "/produtos",
+            new { codigo = "CAF-003", descricao = "Café coado", saldo = 4 });
+
+        var location = resposta.Headers.Location;
+        Assert.NotNull(location);
+
+        var produto = await _api.Client.GetFromJsonAsync<ProdutoResponse>(location);
+
+        Assert.Equal("CAF-003", produto!.Codigo);
+    }
+
+    [Fact]
     public async Task Codigo_duplicado_e_recusado_com_mensagem_que_cita_o_codigo()
     {
         await _api.Client.PostAsJsonAsync(

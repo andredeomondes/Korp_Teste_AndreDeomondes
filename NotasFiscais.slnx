@@ -6,6 +6,9 @@
   <Folder Name="/services/estoque/">
     <Project Path="services/estoque/Estoque.csproj" />
   </Folder>
+  <Folder Name="/services/faturamento.tests/">
+    <Project Path="services/faturamento.tests/Faturamento.Tests.csproj" />
+  </Folder>
   <Folder Name="/services/faturamento/">
     <Project Path="services/faturamento/Faturamento.csproj" />
   </Folder>

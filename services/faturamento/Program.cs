@@ -1,3 +1,5 @@
+using Faturamento.NotasFiscais;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,11 +15,28 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 
-builder.Services.AddNpgsqlDataSource(
-    builder.Configuration.GetConnectionString("Faturamento")
-    ?? throw new InvalidOperationException("Connection string 'Faturamento' não configurada."));
+builder.Services.AddDbContext<FaturamentoDbContext>(options => options
+    .UseNpgsql(builder.Configuration.GetConnectionString("Faturamento")
+        ?? throw new InvalidOperationException("Connection string 'Faturamento' não configurada.")));
 
 var app = builder.Build();
+
+// O schema é aplicado na subida: o serviço é dono do próprio banco e nenhum
+// passo manual deve ficar entre `docker compose up` e a API operante. Falhar em
+// migrar não derruba o processo: o serviço precisa continuar de pé para que
+// `/health` consiga reportar a indisponibilidade do banco em vez de sumir.
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        await scope.ServiceProvider.GetRequiredService<FaturamentoDbContext>()
+            .Database.MigrateAsync();
+    }
+    catch (NpgsqlException erro)
+    {
+        app.Logger.LogCritical(erro, "Falha ao aplicar as migrations do Faturamento.");
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -28,12 +47,11 @@ app.UseCors(FrontendCors);
 
 // O serviço só se considera saudável quando alcança o próprio banco: sem ele
 // não há Nota Fiscal para ler nem gravar, então reportar "ok" seria mentira.
-app.MapGet("/health", async (NpgsqlDataSource dataSource, CancellationToken cancellationToken) =>
+app.MapGet("/health", async (FaturamentoDbContext db, CancellationToken cancellationToken) =>
 {
     try
     {
-        await using var command = dataSource.CreateCommand("SELECT 1");
-        await command.ExecuteScalarAsync(cancellationToken);
+        await db.Database.ExecuteSqlRawAsync("SELECT 1", cancellationToken);
         return Results.Ok(new HealthStatus("faturamento", "ok", "ok"));
     }
     catch (NpgsqlException)
@@ -45,6 +63,12 @@ app.MapGet("/health", async (NpgsqlDataSource dataSource, CancellationToken canc
 })
 .WithName("GetHealth");
 
+app.MapNotasFiscais();
+
 app.Run();
 
 record HealthStatus(string Service, string Status, string Database);
+
+// Torna o host visível para os testes de integração, que sobem esta mesma
+// aplicação via WebApplicationFactory<Program>.
+public partial class Program;

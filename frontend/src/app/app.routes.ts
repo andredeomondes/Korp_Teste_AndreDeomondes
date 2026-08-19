@@ -8,6 +8,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/produtos/produtos-page').then((m) => m.ProdutosPage),
   },
   {
+    path: 'notas-fiscais',
+    title: 'Notas Fiscais',
+    loadComponent: () =>
+      import('./features/notas-fiscais/notas-fiscais-page').then((m) => m.NotasFiscaisPage),
+  },
+  {
     path: 'status',
     title: 'Status dos serviços',
     loadComponent: () => import('./features/status/status-page').then((m) => m.StatusPage),

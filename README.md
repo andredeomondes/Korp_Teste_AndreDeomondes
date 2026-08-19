@@ -54,11 +54,11 @@ O frontend de desenvolvimento sobe em <http://localhost:4200> e consome os servi
 ## Testes
 
 ```bash
-dotnet test                      # integração do Estoque (sobe um PostgreSQL real via Testcontainers)
+dotnet test                      # integração de Estoque e Faturamento (PostgreSQL real via Testcontainers)
 cd frontend && npm test          # componentes Angular
 ```
 
-Os testes do Estoque exigem Docker em execução: cada suíte sobe seu próprio contêiner PostgreSQL e aplica as migrations, sem depender do banco do `docker compose`.
+Os testes de backend exigem Docker em execução: cada suíte sobe seu próprio contêiner PostgreSQL e aplica as migrations, sem depender do banco do `docker compose`.
 
 ## Verificação de saúde
 

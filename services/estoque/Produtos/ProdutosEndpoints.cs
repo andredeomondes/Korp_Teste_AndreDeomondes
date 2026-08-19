@@ -24,6 +24,23 @@ public static class ProdutosEndpoints
                 .ToListAsync(cancellationToken))
             .WithName("ListarProdutos");
 
+        produtos.MapGet("/{id:guid}", async (
+            Guid id,
+            EstoqueDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            var produto = await db.Produtos.FindAsync([id], cancellationToken);
+
+            return produto is null
+                ? Results.NotFound()
+                : Results.Ok(new ProdutoResponse(
+                    produto.Id,
+                    produto.Codigo,
+                    produto.Descricao,
+                    produto.Saldo));
+        })
+            .WithName("ObterProduto");
+
         produtos.MapPost("/", async (
             CadastrarProdutoRequest request,
             EstoqueDbContext db,

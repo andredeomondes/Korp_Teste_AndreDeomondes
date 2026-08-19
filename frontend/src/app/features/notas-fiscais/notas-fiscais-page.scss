@@ -1,0 +1,40 @@
+@use '../../shared/feedback' as feedback;
+
+@include feedback.feedback('notas');
+
+.notas__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.notas__acoes {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.notas__tabela {
+  width: 100%;
+  background: transparent;
+}
+
+.notas__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--mat-sys-corner-full);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font: var(--mat-sys-label-medium);
+}
+
+.notas__status--fechada {
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.notas__erro {
+  margin: 0 0 0.75rem;
+}
