@@ -46,6 +46,11 @@ public static class ItensDaNotaEndpoints
                 return Results.NotFound();
             }
 
+            if (nota.Status != StatusNotaFiscal.Aberta)
+            {
+                return NotaFechada(nota);
+            }
+
             // O Produto pertence ao Estoque: é lá que se descobre se ele existe e
             // qual a sua Descrição atual.
             ProdutoDoEstoque? produto;
@@ -115,11 +120,16 @@ public static class ItensDaNotaEndpoints
                 return QuantidadeInvalida();
             }
 
-            var item = await BuscarItemAsync(db, notaId, itemId, cancellationToken);
+            var (nota, item) = await BuscarNotaEItemAsync(db, notaId, itemId, cancellationToken);
 
-            if (item is null)
+            if (nota is null || item is null)
             {
                 return Results.NotFound();
+            }
+
+            if (nota.Status != StatusNotaFiscal.Aberta)
+            {
+                return NotaFechada(nota);
             }
 
             item.AlterarQuantidade(request.Quantidade);
@@ -135,11 +145,16 @@ public static class ItensDaNotaEndpoints
             FaturamentoDbContext db,
             CancellationToken cancellationToken) =>
         {
-            var item = await BuscarItemAsync(db, notaId, itemId, cancellationToken);
+            var (nota, item) = await BuscarNotaEItemAsync(db, notaId, itemId, cancellationToken);
 
-            if (item is null)
+            if (nota is null || item is null)
             {
                 return Results.NotFound();
+            }
+
+            if (nota.Status != StatusNotaFiscal.Aberta)
+            {
+                return NotaFechada(nota);
             }
 
             db.ItensDaNota.Remove(item);
@@ -152,14 +167,43 @@ public static class ItensDaNotaEndpoints
         return app;
     }
 
-    private static Task<ItemDaNota?> BuscarItemAsync(
+    /// <summary>
+    /// Alterar ou remover um Item exige saber se a Nota Fiscal ainda está
+    /// Aberta, e o Item sozinho não conta isso. Duas consultas diretas em vez de
+    /// um include filtrado: o resultado não depende do que já esteja rastreado
+    /// no contexto.
+    /// </summary>
+    private static async Task<(NotaFiscal? Nota, ItemDaNota? Item)> BuscarNotaEItemAsync(
         FaturamentoDbContext db,
         Guid notaId,
         Guid itemId,
-        CancellationToken cancellationToken) =>
-        db.ItensDaNota.FirstOrDefaultAsync(
+        CancellationToken cancellationToken)
+    {
+        var nota = await db.NotasFiscais.FirstOrDefaultAsync(
+            nota => nota.Id == notaId,
+            cancellationToken);
+
+        if (nota is null)
+        {
+            return (null, null);
+        }
+
+        var item = await db.ItensDaNota.FirstOrDefaultAsync(
             item => item.Id == itemId && item.NotaFiscalId == notaId,
             cancellationToken);
+
+        return (nota, item);
+    }
+
+    /// <summary>
+    /// Depois de Fechada a Nota Fiscal é imutável: ela afirma um Saldo já
+    /// debitado, e mexer nos Itens tornaria essa afirmação falsa.
+    /// </summary>
+    private static IResult NotaFechada(NotaFiscal nota) =>
+        Results.Problem(
+            title: "Nota Fiscal fechada",
+            detail: $"A Nota Fiscal {nota.Numero} está Fechada e não pode mais ser alterada.",
+            statusCode: StatusCodes.Status409Conflict);
 
     private static bool ViolouUnicidadeDoProduto(DbUpdateException erro) =>
         erro.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };

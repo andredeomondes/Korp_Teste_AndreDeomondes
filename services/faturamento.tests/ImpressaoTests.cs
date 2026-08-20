@@ -19,7 +19,7 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
         var cafe = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
         var acucar = _api.Estoque.Cadastrar("ACU-001", "Açúcar refinado 1kg", 20);
 
-        var nota = await CriarNotaComItensAsync((cafe, 2), (acucar, 5));
+        var nota = await _api.Client.CriarNotaAsync((cafe, 2), (acucar, 5));
 
         var resposta = await _api.Client.PostAsync($"/notas-fiscais/{nota.Id}/impressao", null);
 
@@ -40,7 +40,7 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
     public async Task Nota_impressa_continua_fechada_na_listagem()
     {
         var cafe = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaComItensAsync((cafe, 2));
+        var nota = await _api.Client.CriarNotaAsync((cafe, 2));
 
         await _api.Client.PostAsync($"/notas-fiscais/{nota.Id}/impressao", null);
 
@@ -54,7 +54,7 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
     public async Task Nota_ja_fechada_nao_e_impressa_de_novo_nem_debita_outra_vez()
     {
         var cafe = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaComItensAsync((cafe, 2));
+        var nota = await _api.Client.CriarNotaAsync((cafe, 2));
 
         await _api.Client.PostAsync($"/notas-fiscais/{nota.Id}/impressao", null);
         var segunda = await _api.Client.PostAsync($"/notas-fiscais/{nota.Id}/impressao", null);
@@ -68,7 +68,7 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
     [Fact]
     public async Task Nota_sem_itens_nao_vai_ao_estoque()
     {
-        var nota = await CriarNotaComItensAsync();
+        var nota = await _api.Client.CriarNotaAsync();
 
         var resposta = await _api.Client.PostAsync($"/notas-fiscais/{nota.Id}/impressao", null);
 
@@ -80,7 +80,7 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
     public async Task Estoque_fora_do_ar_deixa_a_nota_aberta()
     {
         var cafe = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaComItensAsync((cafe, 2));
+        var nota = await _api.Client.CriarNotaAsync((cafe, 2));
 
         _api.Estoque.ForaDoAr = true;
 
@@ -95,23 +95,4 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
         Assert.Equal("Aberta", detalhe!.Status);
     }
 
-    private async Task<NotaFiscalResponse> CriarNotaComItensAsync(
-        params (Guid ProdutoId, int Quantidade)[] itens)
-    {
-        var criada = await _api.Client.PostAsync("/notas-fiscais", null);
-        var nota = (await criada.Content.ReadFromJsonAsync<NotaFiscalResponse>())!;
-
-        foreach (var (produtoId, quantidade) in itens)
-        {
-            var resposta = await _api.Client.PostAsJsonAsync(
-                $"/notas-fiscais/{nota.Id}/itens",
-                new { produtoId, quantidade });
-
-            resposta.EnsureSuccessStatusCode();
-        }
-
-        return nota;
-    }
-
-    private sealed record NotaFiscalResponse(Guid Id, long Numero, string Status);
 }

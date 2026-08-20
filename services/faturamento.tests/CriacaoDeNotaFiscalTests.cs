@@ -49,8 +49,8 @@ public sealed class CriacaoDeNotaFiscalTests
     [Fact]
     public async Task Numeracao_cresce_e_nao_reusa_numero_de_nota_removida()
     {
-        var primeira = await CriarNotaAsync();
-        var segunda = await CriarNotaAsync();
+        var primeira = await _api.Client.CriarNotaAsync();
+        var segunda = await _api.Client.CriarNotaAsync();
 
         Assert.True(segunda.Numero > primeira.Numero);
 
@@ -59,17 +59,9 @@ public sealed class CriacaoDeNotaFiscalTests
         // número já usado.
         await _api.ResetAsync();
 
-        var depoisDaLimpeza = await CriarNotaAsync();
+        var depoisDaLimpeza = await _api.Client.CriarNotaAsync();
 
         Assert.True(depoisDaLimpeza.Numero > segunda.Numero);
     }
 
-    private async Task<NotaFiscalResponse> CriarNotaAsync()
-    {
-        var resposta = await _api.Client.PostAsync("/notas-fiscais", null);
-        resposta.EnsureSuccessStatusCode();
-        return (await resposta.Content.ReadFromJsonAsync<NotaFiscalResponse>())!;
-    }
-
-    private sealed record NotaFiscalResponse(Guid Id, long Numero, string Status);
 }

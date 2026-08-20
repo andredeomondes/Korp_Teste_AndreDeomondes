@@ -58,6 +58,10 @@ public sealed class DebitoDeSaldoTests : IClassFixture<EstoqueApiFixture>, IAsyn
 
         Assert.Equal(HttpStatusCode.Conflict, resposta.StatusCode);
 
+        // A recusa diz qual Produto ficou sem Saldo: é essa frase que o
+        // Faturamento repassa e o operador lê na tela.
+        Assert.Contains("ACU-001", await resposta.Content.ReadAsStringAsync());
+
         // O Café tinha Saldo de sobra e vinha antes na lista: se o débito não
         // fosse atômico, ele teria sido reduzido antes de o Açúcar falhar.
         Assert.Equal(10, await SaldoAsync(cafe.Id));

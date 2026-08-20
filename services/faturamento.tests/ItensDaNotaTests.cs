@@ -17,7 +17,7 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
     public async Task Produto_adicionado_aparece_nos_itens_da_nota_com_codigo_e_descricao()
     {
         var produtoId = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
 
         var resposta = await _api.Client.PostAsJsonAsync(
             $"/notas-fiscais/{nota.Id}/itens",
@@ -29,7 +29,7 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
             resposta.StatusCode == HttpStatusCode.Created,
             await resposta.Content.ReadAsStringAsync());
 
-        var detalhe = await ObterNotaAsync(nota.Id);
+        var detalhe = await _api.Client.ObterNotaAsync(nota.Id);
 
         var item = Assert.Single(detalhe.Itens);
         Assert.Equal(produtoId, item.ProdutoId);
@@ -42,7 +42,7 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
     public async Task Quantidade_do_item_pode_ser_alterada()
     {
         var produtoId = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
         var item = await AdicionarItemAsync(nota.Id, produtoId, 3);
 
         var resposta = await _api.Client.PutAsJsonAsync(
@@ -51,7 +51,7 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
 
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
 
-        var detalhe = await ObterNotaAsync(nota.Id);
+        var detalhe = await _api.Client.ObterNotaAsync(nota.Id);
         Assert.Equal(7, Assert.Single(detalhe.Itens).Quantidade);
     }
 
@@ -59,14 +59,14 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
     public async Task Item_removido_some_da_nota()
     {
         var produtoId = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
         var item = await AdicionarItemAsync(nota.Id, produtoId, 3);
 
         var resposta = await _api.Client.DeleteAsync($"/notas-fiscais/{nota.Id}/itens/{item.Id}");
 
         Assert.Equal(HttpStatusCode.NoContent, resposta.StatusCode);
 
-        var detalhe = await ObterNotaAsync(nota.Id);
+        var detalhe = await _api.Client.ObterNotaAsync(nota.Id);
         Assert.Empty(detalhe.Itens);
     }
 
@@ -75,12 +75,12 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
     {
         var cafe = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
         var acucar = _api.Estoque.Cadastrar("ACU-001", "Açúcar refinado 1kg", 20);
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
 
         await AdicionarItemAsync(nota.Id, cafe, 3);
         await AdicionarItemAsync(nota.Id, acucar, 5);
 
-        var detalhe = await ObterNotaAsync(nota.Id);
+        var detalhe = await _api.Client.ObterNotaAsync(nota.Id);
 
         Assert.Equal(2, detalhe.Itens.Length);
         Assert.Equal(5, detalhe.Itens.Single(item => item.Codigo == "ACU-001").Quantidade);
@@ -92,7 +92,7 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
     public async Task Quantidade_nao_positiva_e_recusada(int quantidade)
     {
         var produtoId = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
 
         var resposta = await _api.Client.PostAsJsonAsync(
             $"/notas-fiscais/{nota.Id}/itens",
@@ -100,14 +100,14 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
 
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
 
-        var detalhe = await ObterNotaAsync(nota.Id);
+        var detalhe = await _api.Client.ObterNotaAsync(nota.Id);
         Assert.Empty(detalhe.Itens);
     }
 
     [Fact]
     public async Task Produto_que_nao_existe_no_estoque_e_recusado()
     {
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
 
         var resposta = await _api.Client.PostAsJsonAsync(
             $"/notas-fiscais/{nota.Id}/itens",
@@ -132,7 +132,7 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
     [Fact]
     public async Task Estoque_fora_do_ar_responde_503_em_vez_de_erro_opaco()
     {
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
         _api.Estoque.ForaDoAr = true;
 
         var resposta = await _api.Client.PostAsJsonAsync(
@@ -170,7 +170,7 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
     public async Task Mesmo_produto_duas_vezes_e_recusado_com_mensagem_que_cita_o_codigo()
     {
         var produtoId = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
-        var nota = await CriarNotaAsync();
+        var nota = await _api.Client.CriarNotaAsync();
         await AdicionarItemAsync(nota.Id, produtoId, 3);
 
         var resposta = await _api.Client.PostAsJsonAsync(
@@ -197,28 +197,5 @@ public sealed class ItensDaNotaTests : IClassFixture<FaturamentoApiFixture>, IAs
         return (await resposta.Content.ReadFromJsonAsync<ItemDaNotaResponse>())!;
     }
 
-    private async Task<NotaFiscalResponse> CriarNotaAsync()
-    {
-        var resposta = await _api.Client.PostAsync("/notas-fiscais", null);
-        resposta.EnsureSuccessStatusCode();
-        return (await resposta.Content.ReadFromJsonAsync<NotaFiscalResponse>())!;
-    }
-
-    private async Task<NotaFiscalResponse> ObterNotaAsync(Guid id) =>
-        (await _api.Client.GetFromJsonAsync<NotaFiscalResponse>($"/notas-fiscais/{id}"))!;
-
-    private sealed record NotaFiscalResponse(
-        Guid Id,
-        long Numero,
-        string Status,
-        ItemDaNotaResponse[] Itens);
-
     private sealed record ProdutoDisponivelResponse(Guid Id, string Codigo, string Descricao);
-
-    private sealed record ItemDaNotaResponse(
-        Guid Id,
-        Guid ProdutoId,
-        string Codigo,
-        string Descricao,
-        int Quantidade);
 }

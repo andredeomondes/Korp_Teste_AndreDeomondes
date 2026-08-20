@@ -31,10 +31,17 @@ public sealed class EstoqueFalso : HttpMessageHandler
         return id;
     }
 
+    /// <summary>
+    /// Faz o próximo débito ser recusado com este motivo, como o Estoque faria
+    /// diante de Saldo insuficiente.
+    /// </summary>
+    public string? RecusaProgramada { get; set; }
+
     public void Limpar()
     {
         _produtos.Clear();
         Debitos.Clear();
+        RecusaProgramada = null;
         ForaDoAr = false;
     }
 
@@ -78,10 +85,29 @@ public sealed class EstoqueFalso : HttpMessageHandler
         return Task.FromResult(resposta);
     }
 
+    /// <summary>
+    /// Reproduz o <em>contrato</em> do débito, não a regra: quando a recusa está
+    /// programada, responde 409 com ProblemDetails e não registra débito nenhum.
+    /// Decidir se há Saldo é do Estoque de verdade, e está testado lá — repetir
+    /// essa decisão aqui criaria uma segunda regra que ninguém obriga a
+    /// concordar com a primeira.
+    /// </summary>
     private async Task<HttpResponseMessage> RegistrarDebitoAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        if (RecusaProgramada is not null)
+        {
+            return new HttpResponseMessage(HttpStatusCode.Conflict)
+            {
+                Content = JsonContent.Create(new
+                {
+                    title = "Saldo insuficiente",
+                    detail = RecusaProgramada,
+                }),
+            };
+        }
+
         var debito = await request.Content!.ReadFromJsonAsync<DebitoRecebido>(cancellationToken);
 
         Debitos.AddRange(debito!.Itens);
