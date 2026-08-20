@@ -51,6 +51,28 @@ cd frontend && npm install && npm start
 
 O frontend de desenvolvimento sobe em <http://localhost:4200> e consome os serviços em 5001 e 5002.
 
+## Cenário de falha: o Estoque fora do ar
+
+Requisito obrigatório do teste, reproduzível com a stack no ar.
+
+1. Prepare uma Nota Fiscal Aberta com pelo menos um Item da Nota, em <http://localhost:4300/notas-fiscais>.
+2. Derrube o Estoque e deixe o resto de pé:
+
+   ```bash
+   docker compose stop estoque
+   ```
+
+3. Clique em **Imprimir**. A tela mostra _Serviço indisponível_, com o botão **Tentar novamente** — e a Nota Fiscal **continua Aberta**, com seus itens intactos. Em **Status dos serviços**, o Estoque aparece como Indisponível. (Ao recarregar a tela com o Estoque parado, a lista de Produtos disponíveis também acusa a indisponibilidade — ela vem do Estoque.)
+4. Suba o Estoque de volta e clique em **Tentar novamente**:
+
+   ```bash
+   docker compose start estoque
+   ```
+
+   A Impressão se completa, a nota vira Fechada e o Saldo é debitado uma única vez.
+
+A tela separa dois casos que o protocolo aproxima: **indisponibilidade** (503) convida a repetir a operação; **recusa de negócio** (4xx, como Saldo insuficiente) diz o que houve e não oferece repetição, porque repetir sem mudar nada daria no mesmo.
+
 ## Testes
 
 ```bash

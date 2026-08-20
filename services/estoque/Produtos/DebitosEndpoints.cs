@@ -55,19 +55,20 @@ public static class DebitosEndpoints
             {
                 if (!produtos.TryGetValue(item.ProdutoId, out var produto))
                 {
-                    return Results.Problem(
-                        title: "Produto inexistente",
-                        detail: $"O Produto {item.ProdutoId} não existe no Estoque.",
-                        statusCode: StatusCodes.Status422UnprocessableEntity);
+                    return Erros.Recusa(
+                        Erros.ProdutoInexistente,
+                        "Produto inexistente",
+                        $"O Produto {item.ProdutoId} não existe no Estoque.",
+                        StatusCodes.Status422UnprocessableEntity);
                 }
 
                 if (item.Quantidade > produto.Saldo)
                 {
-                    return Results.Problem(
-                        title: "Saldo insuficiente",
-                        detail: $"O Produto {produto.Codigo} tem Saldo {produto.Saldo} "
-                            + $"e a operação pediu {item.Quantidade}.",
-                        statusCode: StatusCodes.Status409Conflict);
+                    return Erros.Recusa(
+                        Erros.SaldoInsuficiente,
+                        "Saldo insuficiente",
+                        $"O Produto {produto.Codigo} tem Saldo {produto.Saldo} "
+                            + $"e a operação pediu {item.Quantidade}.");
                 }
             }
 

@@ -30,13 +30,8 @@ describe('NotaFiscalDetalhePage', () => {
 
   afterEach(() => http.verify());
 
-  /** Monta a tela para uma Nota Fiscal com o Status pedido e devolve o HTML. */
-  async function renderizar(status: StatusNotaFiscal): Promise<HTMLElement> {
-    const fixture = TestBed.createComponent(NotaFiscalDetalhePage);
-    fixture.componentRef.setInput('id', NOTA_ID);
-    fixture.detectChanges();
-
-    const nota: NotaFiscal = {
+  function notaCom(status: StatusNotaFiscal): NotaFiscal {
+    return {
       id: NOTA_ID,
       numero: 42,
       status,
@@ -50,8 +45,17 @@ describe('NotaFiscalDetalhePage', () => {
         },
       ],
     };
+  }
 
-    http.expectOne(`${API.faturamento}/notas-fiscais/${NOTA_ID}`).flush(nota);
+  const notaAberta = () => notaCom('Aberta');
+
+  /** Monta a tela para uma Nota Fiscal com o Status pedido e devolve o HTML. */
+  async function renderizar(status: StatusNotaFiscal): Promise<HTMLElement> {
+    const fixture = TestBed.createComponent(NotaFiscalDetalhePage);
+    fixture.componentRef.setInput('id', NOTA_ID);
+    fixture.detectChanges();
+
+    http.expectOne(`${API.faturamento}/notas-fiscais/${NOTA_ID}`).flush(notaCom(status));
     http.expectOne(`${API.faturamento}/produtos-disponiveis`).flush([]);
 
     await fixture.whenStable();
@@ -59,6 +63,60 @@ describe('NotaFiscalDetalhePage', () => {
 
     return fixture.nativeElement as HTMLElement;
   }
+
+  /** Clica em Imprimir e faz o serviço responder com o erro informado. */
+  async function imprimirComFalha(
+    status: number,
+    corpo: { title: string; detail: string },
+  ): Promise<HTMLElement> {
+    const fixture = TestBed.createComponent(NotaFiscalDetalhePage);
+    fixture.componentRef.setInput('id', NOTA_ID);
+    fixture.detectChanges();
+
+    http.expectOne(`${API.faturamento}/notas-fiscais/${NOTA_ID}`).flush(notaAberta());
+    http.expectOne(`${API.faturamento}/produtos-disponiveis`).flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const tela = fixture.nativeElement as HTMLElement;
+    const imprimir = [...tela.querySelectorAll('button')].find((botao) =>
+      botao.textContent?.includes('Imprimir'),
+    );
+    imprimir!.click();
+
+    http
+      .expectOne(`${API.faturamento}/notas-fiscais/${NOTA_ID}/impressao`)
+      .flush(corpo, { status, statusText: 'erro' });
+
+    // A tela recarrega a nota depois de uma falha de Impressão.
+    http.expectOne(`${API.faturamento}/notas-fiscais/${NOTA_ID}`).flush(notaAberta());
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    return tela;
+  }
+
+  it('apresenta indisponibilidade como algo a tentar de novo', async () => {
+    const tela = await imprimirComFalha(503, {
+      title: 'Estoque indisponível',
+      detail: 'Não foi possível falar com o Estoque. Tente novamente em instantes.',
+    });
+
+    expect(tela.textContent).toContain('Serviço indisponível');
+    expect(tela.textContent).toContain('Tentar novamente');
+  });
+
+  it('apresenta recusa de negócio sem convidar a repetir a operação', async () => {
+    const tela = await imprimirComFalha(409, {
+      title: 'Impressão recusada',
+      detail: 'O Produto CAF-001 tem Saldo 1 e a operação pediu 5.',
+    });
+
+    expect(tela.textContent).toContain('Operação recusada');
+    expect(tela.textContent).toContain('CAF-001');
+    expect(tela.textContent).not.toContain('Tentar novamente');
+  });
 
   it('oferece Imprimir e edição enquanto a Nota Fiscal está Aberta', async () => {
     const tela = await renderizar('Aberta');

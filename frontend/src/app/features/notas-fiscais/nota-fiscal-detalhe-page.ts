@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -11,7 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 
-import { mensagemDoErro } from '../../core/api-error';
+import { FalhaDaApi, TipoDeFalha, falhaDaApi, falhaDeNegocio } from '../../core/api-error';
 import { NotaFiscal, NotaFiscalService, ProdutoDisponivel } from '../../core/nota-fiscal.service';
 
 @Component({
@@ -46,7 +46,33 @@ export class NotaFiscalDetalhePage implements OnInit {
   protected readonly carregando = signal(false);
   protected readonly salvando = signal(false);
   protected readonly imprimindo = signal(false);
-  protected readonly erro = signal<string | null>(null);
+  /**
+   * A última falha da tela, seja de qual operação for. Uma só, porque uma
+   * mensagem que sobrevive à operação seguinte descreve um estado que já passou.
+   */
+  protected readonly falha = signal<FalhaDaApi | null>(null);
+
+  /** Como cada tipo de falha se apresenta — a decisão fica aqui, não no template. */
+  protected readonly aparencia = computed(() => {
+    const falha = this.falha();
+
+    if (falha === null) {
+      return null;
+    }
+
+    const porTipo: Record<TipoDeFalha, { titulo: string; icone: string; grave: boolean }> = {
+      indisponibilidade: { titulo: 'Serviço indisponível', icone: 'cloud_off', grave: false },
+      negocio: { titulo: 'Operação recusada', icone: 'block', grave: true },
+      desconhecida: { titulo: 'Algo deu errado', icone: 'error', grave: true },
+    };
+
+    return {
+      ...porTipo[falha.tipo],
+      mensagem: falha.mensagem,
+      // Repetir só faz sentido quando nada precisa mudar antes.
+      podeTentarDeNovo: falha.tipo !== 'negocio',
+    };
+  });
 
   protected readonly form = this.formBuilder.nonNullable.group({
     produtoId: ['', Validators.required],
@@ -58,9 +84,16 @@ export class NotaFiscalDetalhePage implements OnInit {
     this.carregarProdutos();
   }
 
-  protected carregar(): void {
+  /**
+   * @param limparFalha `false` ao recarregar logo após uma operação ter
+   * falhado: a mensagem daquela falha é justamente o que o operador precisa ler.
+   */
+  protected carregar(limparFalha = true): void {
     this.carregando.set(true);
-    this.erro.set(null);
+
+    if (limparFalha) {
+      this.falha.set(null);
+    }
 
     this.notaFiscalService.obter(this.id()).subscribe({
       next: (nota) => {
@@ -68,7 +101,7 @@ export class NotaFiscalDetalhePage implements OnInit {
         this.carregando.set(false);
       },
       error: (erro) => {
-        this.erro.set(mensagemDoErro(erro, 'Não foi possível carregar a Nota Fiscal.'));
+        this.falha.set(falhaDaApi(erro, 'Não foi possível carregar a Nota Fiscal.'));
         this.carregando.set(false);
       },
     });
@@ -82,7 +115,7 @@ export class NotaFiscalDetalhePage implements OnInit {
 
     const { produtoId, quantidade } = this.form.getRawValue();
     this.salvando.set(true);
-    this.erro.set(null);
+    this.falha.set(null);
 
     this.notaFiscalService.adicionarItem(this.id(), produtoId, quantidade).subscribe({
       next: () => {
@@ -91,7 +124,7 @@ export class NotaFiscalDetalhePage implements OnInit {
         this.carregar();
       },
       error: (erro) => {
-        this.erro.set(mensagemDoErro(erro, 'Não foi possível adicionar o Item da Nota.'));
+        this.falha.set(falhaDaApi(erro, 'Não foi possível adicionar o Item da Nota.'));
         this.salvando.set(false);
       },
     });
@@ -101,17 +134,17 @@ export class NotaFiscalDetalhePage implements OnInit {
     const quantidade = Number(valor);
 
     if (!Number.isInteger(quantidade) || quantidade < 1) {
-      this.erro.set('Quantidade do Item da Nota deve ser positiva.');
+      this.falha.set(falhaDeNegocio('Quantidade do Item da Nota deve ser positiva.'));
       return;
     }
 
-    this.erro.set(null);
+    this.falha.set(null);
 
     this.notaFiscalService.alterarQuantidade(this.id(), itemId, quantidade).subscribe({
       next: () => this.carregar(),
       error: (erro) => {
-        this.erro.set(mensagemDoErro(erro, 'Não foi possível alterar a quantidade.'));
-        this.carregar();
+        this.falha.set(falhaDaApi(erro, 'Não foi possível alterar a quantidade.'));
+        this.carregar(false);
       },
     });
   }
@@ -131,7 +164,7 @@ export class NotaFiscalDetalhePage implements OnInit {
    */
   protected imprimir(): void {
     this.imprimindo.set(true);
-    this.erro.set(null);
+    this.falha.set(null);
 
     this.notaFiscalService.imprimir(this.id()).subscribe({
       next: (nota) => {
@@ -142,16 +175,16 @@ export class NotaFiscalDetalhePage implements OnInit {
         this.carregarProdutos();
       },
       error: (erro) => {
-        this.erro.set(mensagemDoErro(erro, 'Não foi possível imprimir a Nota Fiscal.'));
+        this.falha.set(falhaDaApi(erro, 'Não foi possível imprimir a Nota Fiscal.'));
         this.imprimindo.set(false);
         // A nota pode ter mudado no servidor; a tela não adivinha o estado dela.
-        this.carregar();
+        this.carregar(false);
       },
     });
   }
 
   protected remover(itemId: string): void {
-    this.erro.set(null);
+    this.falha.set(null);
 
     this.notaFiscalService.removerItem(this.id(), itemId).subscribe({
       next: () => {
@@ -159,7 +192,7 @@ export class NotaFiscalDetalhePage implements OnInit {
         this.carregar();
       },
       error: (erro) => {
-        this.erro.set(mensagemDoErro(erro, 'Não foi possível remover o Item da Nota.'));
+        this.falha.set(falhaDaApi(erro, 'Não foi possível remover o Item da Nota.'));
       },
     });
   }
@@ -172,7 +205,7 @@ export class NotaFiscalDetalhePage implements OnInit {
     this.notaFiscalService.produtosDisponiveis().subscribe({
       next: (produtos) => this.produtos.set(produtos),
       error: (erro) =>
-        this.erro.set(mensagemDoErro(erro, 'Não foi possível carregar os Produtos do Estoque.')),
+        this.falha.set(falhaDaApi(erro, 'Não foi possível carregar os Produtos do Estoque.')),
     });
   }
 }

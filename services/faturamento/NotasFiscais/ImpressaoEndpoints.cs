@@ -32,19 +32,18 @@ public static class ImpressaoEndpoints
             // duas vezes debitaria o Saldo duas vezes.
             if (nota.Status != StatusNotaFiscal.Aberta)
             {
-                return Results.Problem(
-                    title: "Nota Fiscal já impressa",
-                    detail: $"A Nota Fiscal {nota.Numero} está Fechada e não pode ser impressa "
-                        + "de novo.",
-                    statusCode: StatusCodes.Status409Conflict);
+                return Erros.Recusa(
+                    Erros.NotaJaImpressa,
+                    "Nota Fiscal já impressa",
+                    $"A Nota Fiscal {nota.Numero} está Fechada e não pode ser impressa de novo.");
             }
 
             if (nota.Itens.Count == 0)
             {
-                return Results.Problem(
-                    title: "Nota Fiscal sem itens",
-                    detail: "Adicione ao menos um Item da Nota antes de imprimir.",
-                    statusCode: StatusCodes.Status409Conflict);
+                return Erros.Recusa(
+                    Erros.NotaSemItens,
+                    "Nota Fiscal sem itens",
+                    "Adicione ao menos um Item da Nota antes de imprimir.");
             }
 
             var itens = nota.Itens
@@ -66,10 +65,10 @@ public static class ImpressaoEndpoints
 
             if (!resultado.Debitou)
             {
-                return Results.Problem(
-                    title: "Impressão recusada",
-                    detail: resultado.Motivo,
-                    statusCode: StatusCodes.Status409Conflict);
+                return Erros.Recusa(
+                    Erros.ImpressaoRecusada,
+                    "Impressão recusada",
+                    resultado.Motivo ?? "O Estoque recusou a baixa de Saldo.");
             }
 
             // O Saldo já foi debitado: só agora a nota vira Fechada.

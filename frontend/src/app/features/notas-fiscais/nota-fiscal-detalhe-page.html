@@ -68,11 +68,27 @@
           </form>
         }
 
-        @if (erro(); as mensagem) {
-          <p class="detalhe__erro" role="alert">
-            <mat-icon>error</mat-icon>
-            {{ mensagem }}
-          </p>
+        <!--
+          Indisponibilidade e recusa de negócio se parecem no protocolo, mas
+          pedem coisas diferentes do operador: uma pede paciência e outra pede
+          uma decisão. A tela separa as duas.
+        -->
+        @if (aparencia(); as falha) {
+          <div class="detalhe__falha" [class.detalhe__falha--grave]="falha.grave" role="alert">
+            <mat-icon>{{ falha.icone }}</mat-icon>
+
+            <div>
+              <strong>{{ falha.titulo }}</strong>
+              <p>{{ falha.mensagem }}</p>
+            </div>
+
+            @if (falha.podeTentarDeNovo && notaFiscal.status === 'Aberta') {
+              <button matButton="outlined" type="button" (click)="imprimir()">
+                <mat-icon>refresh</mat-icon>
+                Tentar novamente
+              </button>
+            }
+          </div>
         }
 
         @if (notaFiscal.itens.length === 0) {
@@ -135,7 +151,7 @@
   } @else {
     <p class="detalhe__erro" role="alert">
       <mat-icon>error</mat-icon>
-      {{ erro() ?? 'Nota Fiscal não encontrada.' }}
+      {{ falha()?.mensagem ?? 'Nota Fiscal não encontrada.' }}
     </p>
   }
 </div>

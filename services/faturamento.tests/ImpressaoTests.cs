@@ -5,6 +5,8 @@ namespace Faturamento.Tests;
 
 public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyncLifetime
 {
+    private sealed record ProblemaComCodigo(string Title, string Detail, string Codigo);
+
     private readonly FaturamentoApiFixture _api;
 
     public ImpressaoTests(FaturamentoApiFixture api) => _api = api;
@@ -61,6 +63,11 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
 
         Assert.Equal(HttpStatusCode.Conflict, segunda.StatusCode);
 
+        // A recusa vem com código estável: quem consome a API distingue os
+        // motivos sem depender de comparar frases em português.
+        var problema = await segunda.Content.ReadFromJsonAsync<ProblemaComCodigo>();
+        Assert.Equal("NOTA_JA_IMPRESSA", problema!.Codigo);
+
         // O Estoque foi chamado uma vez só: a segunda tentativa nem chegou nele.
         Assert.Single(_api.Estoque.Debitos);
     }
@@ -77,22 +84,29 @@ public sealed class ImpressaoTests : IClassFixture<FaturamentoApiFixture>, IAsyn
     }
 
     [Fact]
-    public async Task Estoque_fora_do_ar_deixa_a_nota_aberta()
+    public async Task Impressao_se_completa_na_segunda_tentativa_quando_o_estoque_volta()
     {
         var cafe = _api.Estoque.Cadastrar("CAF-001", "Café em grãos 1kg", 10);
         var nota = await _api.Client.CriarNotaAsync((cafe, 2));
 
         _api.Estoque.ForaDoAr = true;
+        var comEstoqueFora = await _api.Client.PostAsync(
+            $"/notas-fiscais/{nota.Id}/impressao",
+            null);
 
-        var resposta = await _api.Client.PostAsync($"/notas-fiscais/{nota.Id}/impressao", null);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, comEstoqueFora.StatusCode);
+        Assert.Empty(_api.Estoque.Debitos);
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, resposta.StatusCode);
-
+        // A nota sobreviveu à indisponibilidade: o operador tenta de novo e a
+        // operação se completa, sem ter perdido nada.
         _api.Estoque.ForaDoAr = false;
-        var detalhe = await _api.Client.GetFromJsonAsync<NotaFiscalResponse>(
-            $"/notas-fiscais/{nota.Id}");
+        var novaTentativa = await _api.Client.PostAsync(
+            $"/notas-fiscais/{nota.Id}/impressao",
+            null);
 
-        Assert.Equal("Aberta", detalhe!.Status);
+        Assert.Equal(HttpStatusCode.OK, novaTentativa.StatusCode);
+        Assert.Equal("Fechada", (await _api.Client.ObterNotaAsync(nota.Id)).Status);
+        Assert.Single(_api.Estoque.Debitos);
     }
 
 }

@@ -68,10 +68,11 @@ public static class ItensDaNotaEndpoints
             {
                 // 422 e não 404: a Nota Fiscal existe e a rota também — o que não
                 // se sustenta é o Produto informado no corpo da requisição.
-                return Results.Problem(
-                    title: "Produto inexistente",
-                    detail: "O Produto informado não existe no Estoque.",
-                    statusCode: StatusCodes.Status422UnprocessableEntity);
+                return Erros.Recusa(
+                    Erros.ProdutoInexistente,
+                    "Produto inexistente",
+                    "O Produto informado não existe no Estoque.",
+                    StatusCodes.Status422UnprocessableEntity);
             }
 
             if (nota.Itens.Any(item => item.ProdutoId == produto.Id))
@@ -200,20 +201,19 @@ public static class ItensDaNotaEndpoints
     /// debitado, e mexer nos Itens tornaria essa afirmação falsa.
     /// </summary>
     private static IResult NotaFechada(NotaFiscal nota) =>
-        Results.Problem(
-            title: "Nota Fiscal fechada",
-            detail: $"A Nota Fiscal {nota.Numero} está Fechada e não pode mais ser alterada.",
-            statusCode: StatusCodes.Status409Conflict);
+        Erros.Recusa(
+            Erros.NotaFechada,
+            "Nota Fiscal fechada",
+            $"A Nota Fiscal {nota.Numero} está Fechada e não pode mais ser alterada.");
 
     private static bool ViolouUnicidadeDoProduto(DbUpdateException erro) =>
         erro.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
 
     private static IResult ProdutoRepetido(string codigo) =>
-        Results.Problem(
-            title: "Produto repetido",
-            detail: $"O Produto {codigo} já está na Nota Fiscal. "
-                + "Altere a quantidade do Item da Nota.",
-            statusCode: StatusCodes.Status409Conflict);
+        Erros.Recusa(
+            Erros.ProdutoRepetido,
+            "Produto repetido",
+            $"O Produto {codigo} já está na Nota Fiscal. Altere a quantidade do Item da Nota.");
 
     private static IResult QuantidadeInvalida() =>
         Results.ValidationProblem(new Dictionary<string, string[]>

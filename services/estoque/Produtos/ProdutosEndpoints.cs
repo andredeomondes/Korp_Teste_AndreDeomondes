@@ -72,10 +72,10 @@ public static class ProdutosEndpoints
                 // A unicidade é decidida pelo banco, não por uma consulta prévia:
                 // entre o SELECT e o INSERT outra requisição poderia cadastrar o
                 // mesmo Código, e o índice único é o único juiz confiável.
-                return Results.Problem(
-                    title: "Código duplicado",
-                    detail: $"Já existe um Produto com o Código '{produto.Codigo}'.",
-                    statusCode: StatusCodes.Status409Conflict);
+                return Erros.Recusa(
+                    Erros.CodigoDuplicado,
+                    "Código duplicado",
+                    $"Já existe um Produto com o Código '{produto.Codigo}'.");
             }
 
             var response = new ProdutoResponse(

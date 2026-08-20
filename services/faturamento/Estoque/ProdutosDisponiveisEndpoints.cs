@@ -34,8 +34,9 @@ public static class ProdutosDisponiveisEndpoints
     /// saber que pode tentar de novo, e não ver um 500 seco.
     /// </summary>
     public static IResult EstoqueIndisponivel() =>
-        Results.Problem(
-            title: "Estoque indisponível",
-            detail: "Não foi possível falar com o Estoque. Tente novamente em instantes.",
-            statusCode: StatusCodes.Status503ServiceUnavailable);
+        Erros.Recusa(
+            Erros.EstoqueIndisponivel,
+            "Estoque indisponível",
+            "Não foi possível falar com o Estoque. Tente novamente em instantes.",
+            StatusCodes.Status503ServiceUnavailable);
 }
