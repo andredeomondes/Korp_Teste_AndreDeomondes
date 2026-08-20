@@ -73,6 +73,7 @@ app.MapGet("/health", async (FaturamentoDbContext db, CancellationToken cancella
 app.MapNotasFiscais();
 app.MapItensDaNota();
 app.MapProdutosDisponiveis();
+app.MapImpressao();
 
 app.Run();
 

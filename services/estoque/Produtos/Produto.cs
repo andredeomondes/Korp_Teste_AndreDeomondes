@@ -17,4 +17,20 @@ public sealed class Produto
     /// qualquer gravação que tentaria levá-lo abaixo de zero.
     /// </summary>
     public required int Saldo { get; set; }
+
+    /// <summary>
+    /// Retira do Saldo a quantidade usada por um Item da Nota. Quem chama já
+    /// decidiu que a operação cabe; o Produto apenas se recusa a entrar em
+    /// estado inválido, e isso é falha de programação, não do operador.
+    /// </summary>
+    public void Debitar(int quantidade)
+    {
+        if (quantidade <= 0 || quantidade > Saldo)
+        {
+            throw new InvalidOperationException(
+                $"Débito de {quantidade} inválido para o Produto {Codigo} com Saldo {Saldo}.");
+        }
+
+        Saldo -= quantidade;
+    }
 }

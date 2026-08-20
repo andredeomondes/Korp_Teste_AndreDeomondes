@@ -39,12 +39,13 @@ export class NotaFiscalDetalhePage implements OnInit {
   /** Vem da rota `/notas-fiscais/:id`, ligada por `withComponentInputBinding`. */
   readonly id = input.required<string>();
 
-  protected readonly colunas = ['codigo', 'descricao', 'quantidade', 'acoes'] as const;
+  protected readonly colunas = ['codigo', 'descricao', 'quantidade', 'saldo', 'acoes'] as const;
 
   protected readonly nota = signal<NotaFiscal | null>(null);
   protected readonly produtos = signal<ProdutoDisponivel[]>([]);
   protected readonly carregando = signal(false);
   protected readonly salvando = signal(false);
+  protected readonly imprimindo = signal(false);
   protected readonly erro = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.nonNullable.group({
@@ -110,6 +111,40 @@ export class NotaFiscalDetalhePage implements OnInit {
       next: () => this.carregar(),
       error: (erro) => {
         this.erro.set(mensagemDoErro(erro, 'Não foi possível alterar a quantidade.'));
+        this.carregar();
+      },
+    });
+  }
+
+  /**
+   * Saldo que o Produto tem hoje no Estoque. Depois da Impressão ele aparece já
+   * debitado — é como a tela mostra que a baixa aconteceu.
+   */
+  protected saldoDe(produtoId: string): number | null {
+    return this.produtos().find((produto) => produto.id === produtoId)?.saldo ?? null;
+  }
+
+  /**
+   * A Impressão pode demorar: ela atravessa o Faturamento e o Estoque. Enquanto
+   * corre, o botão fica desabilitado e a tela mostra que está processando —
+   * clicar duas vezes tentaria debitar o Saldo duas vezes.
+   */
+  protected imprimir(): void {
+    this.imprimindo.set(true);
+    this.erro.set(null);
+
+    this.notaFiscalService.imprimir(this.id()).subscribe({
+      next: (nota) => {
+        this.nota.set(nota);
+        this.imprimindo.set(false);
+        this.snackBar.open(`Nota Fiscal ${nota.numero} impressa.`, 'Fechar', { duration: 4000 });
+        // O Saldo dos Produtos acabou de mudar: a tela precisa mostrar o novo.
+        this.carregarProdutos();
+      },
+      error: (erro) => {
+        this.erro.set(mensagemDoErro(erro, 'Não foi possível imprimir a Nota Fiscal.'));
+        this.imprimindo.set(false);
+        // A nota pode ter mudado no servidor; a tela não adivinha o estado dela.
         this.carregar();
       },
     });

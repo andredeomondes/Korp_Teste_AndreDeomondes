@@ -15,6 +15,9 @@ public sealed class EstoqueFalso : HttpMessageHandler
     /// <summary>Quando ligado, toda chamada ao Estoque falha como se ele estivesse fora.</summary>
     public bool ForaDoAr { get; set; }
 
+    /// <summary>Os débitos que o Estoque recebeu, na ordem em que chegaram.</summary>
+    public List<ItemDebitado> Debitos { get; } = [];
+
     public Guid Cadastrar(string codigo, string descricao, int saldo)
     {
         var id = Guid.CreateVersion7();
@@ -31,8 +34,13 @@ public sealed class EstoqueFalso : HttpMessageHandler
     public void Limpar()
     {
         _produtos.Clear();
+        Debitos.Clear();
         ForaDoAr = false;
     }
+
+    public sealed record ItemDebitado(Guid ProdutoId, int Quantidade);
+
+    private sealed record DebitoRecebido(List<ItemDebitado> Itens);
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
@@ -44,6 +52,11 @@ public sealed class EstoqueFalso : HttpMessageHandler
         }
 
         var caminho = request.RequestUri?.AbsolutePath ?? string.Empty;
+
+        if (caminho.TrimEnd('/').Equals("/debitos", StringComparison.OrdinalIgnoreCase))
+        {
+            return RegistrarDebitoAsync(request, cancellationToken);
+        }
 
         // GET /produtos lista; GET /produtos/{id} busca um.
         if (caminho.TrimEnd('/').Equals("/produtos", StringComparison.OrdinalIgnoreCase))
@@ -63,5 +76,16 @@ public sealed class EstoqueFalso : HttpMessageHandler
             : new HttpResponseMessage(HttpStatusCode.NotFound);
 
         return Task.FromResult(resposta);
+    }
+
+    private async Task<HttpResponseMessage> RegistrarDebitoAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var debito = await request.Content!.ReadFromJsonAsync<DebitoRecebido>(cancellationToken);
+
+        Debitos.AddRange(debito!.Itens);
+
+        return new HttpResponseMessage(HttpStatusCode.NoContent);
     }
 }

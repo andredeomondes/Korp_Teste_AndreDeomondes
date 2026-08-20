@@ -11,6 +11,7 @@ export interface ProdutoDisponivel {
   id: string;
   codigo: string;
   descricao: string;
+  saldo: number;
 }
 
 /** Associação entre uma Nota Fiscal e um Produto, com a quantidade utilizada. */
@@ -66,6 +67,14 @@ export class NotaFiscalService {
 
   alterarQuantidade(notaId: string, itemId: string, quantidade: number): Observable<ItemDaNota> {
     return this.http.put<ItemDaNota>(`${this.url}/${notaId}/itens/${itemId}`, { quantidade });
+  }
+
+  /**
+   * Fecha a Nota Fiscal e debita o Saldo dos Produtos usados. A resposta traz a
+   * nota já Fechada.
+   */
+  imprimir(notaId: string): Observable<NotaFiscal> {
+    return this.http.post<NotaFiscal>(`${this.url}/${notaId}/impressao`, null);
   }
 
   removerItem(notaId: string, itemId: string): Observable<void> {

@@ -8,44 +8,65 @@
     <p class="detalhe__vazio"><mat-spinner diameter="20" /> Carregando Nota Fiscal…</p>
   } @else if (nota(); as notaFiscal) {
     <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Nota Fiscal {{ notaFiscal.numero }}</mat-card-title>
-        <mat-card-subtitle>Status: {{ notaFiscal.status }}</mat-card-subtitle>
+      <mat-card-header class="detalhe__cabecalho">
+        <div>
+          <mat-card-title>Nota Fiscal {{ notaFiscal.numero }}</mat-card-title>
+          <mat-card-subtitle>Status: {{ notaFiscal.status }}</mat-card-subtitle>
+        </div>
+
+        @if (notaFiscal.status === 'Aberta') {
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="imprimindo() || notaFiscal.itens.length === 0"
+            (click)="imprimir()"
+          >
+            @if (imprimindo()) {
+              <mat-spinner diameter="18" />
+            } @else {
+              <mat-icon>print</mat-icon>
+            }
+            {{ imprimindo() ? 'Imprimindo…' : 'Imprimir' }}
+          </button>
+        }
       </mat-card-header>
 
       <mat-card-content>
-        <form class="detalhe__form" [formGroup]="form" (ngSubmit)="adicionar()">
-          <mat-form-field appearance="outline">
-            <mat-label>Produto</mat-label>
-            <mat-select formControlName="produtoId">
-              @for (produto of produtos(); track produto.id) {
-                <mat-option [value]="produto.id">
-                  {{ produto.codigo }} — {{ produto.descricao }}
-                </mat-option>
+        <!-- Nota Fechada é imutável: não há o que adicionar nem alterar nela. -->
+        @if (notaFiscal.status === 'Aberta') {
+          <form class="detalhe__form" [formGroup]="form" (ngSubmit)="adicionar()">
+            <mat-form-field appearance="outline">
+              <mat-label>Produto</mat-label>
+              <mat-select formControlName="produtoId">
+                @for (produto of produtos(); track produto.id) {
+                  <mat-option [value]="produto.id">
+                    {{ produto.codigo }} — {{ produto.descricao }} (Saldo: {{ produto.saldo }})
+                  </mat-option>
+                }
+              </mat-select>
+              @if (form.controls.produtoId.hasError('required')) {
+                <mat-error>Escolha um Produto.</mat-error>
               }
-            </mat-select>
-            @if (form.controls.produtoId.hasError('required')) {
-              <mat-error>Escolha um Produto.</mat-error>
-            }
-          </mat-form-field>
+            </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Quantidade</mat-label>
-            <input matInput type="number" formControlName="quantidade" min="1" step="1" />
-            @if (form.controls.quantidade.hasError('min')) {
-              <mat-error>Quantidade deve ser positiva.</mat-error>
-            }
-          </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Quantidade</mat-label>
+              <input matInput type="number" formControlName="quantidade" min="1" step="1" />
+              @if (form.controls.quantidade.hasError('min')) {
+                <mat-error>Quantidade deve ser positiva.</mat-error>
+              }
+            </mat-form-field>
 
-          <button matButton="filled" type="submit" [disabled]="salvando()">
-            @if (salvando()) {
-              <mat-spinner diameter="18" />
-            } @else {
-              <mat-icon>add</mat-icon>
-            }
-            Adicionar
-          </button>
-        </form>
+            <button matButton="filled" type="submit" [disabled]="salvando()">
+              @if (salvando()) {
+                <mat-spinner diameter="18" />
+              } @else {
+                <mat-icon>add</mat-icon>
+              }
+              Adicionar
+            </button>
+          </form>
+        }
 
         @if (erro(); as mensagem) {
           <p class="detalhe__erro" role="alert">
@@ -77,23 +98,31 @@
                   min="1"
                   step="1"
                   [value]="item.quantidade"
+                  [disabled]="notaFiscal.status === 'Fechada'"
                   [attr.aria-label]="'Quantidade de ' + item.codigo"
                   (change)="alterarQuantidade(item.id, $any($event.target).value)"
                 />
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="saldo">
+              <th mat-header-cell *matHeaderCellDef>Saldo no Estoque</th>
+              <td mat-cell *matCellDef="let item">{{ saldoDe(item.produtoId) ?? '—' }}</td>
+            </ng-container>
+
             <ng-container matColumnDef="acoes">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let item">
-                <button
-                  matIconButton
-                  type="button"
-                  [attr.aria-label]="'Remover ' + item.codigo + ' da Nota Fiscal'"
-                  (click)="remover(item.id)"
-                >
-                  <mat-icon>delete</mat-icon>
-                </button>
+                @if (notaFiscal.status === 'Aberta') {
+                  <button
+                    matIconButton
+                    type="button"
+                    [attr.aria-label]="'Remover ' + item.codigo + ' da Nota Fiscal'"
+                    (click)="remover(item.id)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
               </td>
             </ng-container>
 

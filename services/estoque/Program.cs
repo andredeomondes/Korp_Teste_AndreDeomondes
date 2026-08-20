@@ -63,6 +63,7 @@ app.MapGet("/health", async (EstoqueDbContext db, CancellationToken cancellation
 .WithName("GetHealth");
 
 app.MapProdutos();
+app.MapDebitos();
 
 app.Run();
 
